@@ -1,0 +1,222 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>오늘 뭐 먹지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* layout: 단일 컬럼 — 위는 돌림판, 아래는 월드컵, 맨 아래 공용 목록 편집 */
+:root{
+  --bg:#fdf4ea; --surface:#fffdfa; --fg:#2b1a12; --muted:#8a6f5e;
+  --line:#e6d6c4; --accent:#d9372a; --accent2:#f0a500; --shadow:0 10px 30px rgba(84,42,20,.12);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16100c; --surface:#231913; --fg:#f7ece0; --muted:#b59a85;
+  --line:#3a2a20; --accent:#ff5c45; --accent2:#ffb44d; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#16100c; --surface:#231913; --fg:#f7ece0; --muted:#b59a85;
+  --line:#3a2a20; --accent:#ff5c45; --accent2:#ffb44d; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:"Noto Sans KR",system-ui,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+h1{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-weight:400;font-size:clamp(2rem,8vw,3rem);margin:0;line-height:1.05;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{color:var(--muted);margin:.5rem 0 0;font-size:.95rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 18px;box-shadow:var(--shadow)}
+.card h2{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-weight:400;font-size:1.35rem;margin:0 0 2px}
+.card p.hint{color:var(--muted);font-size:.85rem;margin:0 0 16px}
+/* 돌림판 */
+.stage{position:relative;width:min(100%,380px);margin:0 auto;aspect-ratio:1}
+canvas{width:100%;height:100%;display:block;border-radius:50%;transition:transform 4.2s cubic-bezier(.17,.67,.17,1)}
+.needle{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid var(--accent);filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));z-index:2}
+.hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24%;aspect-ratio:1;border-radius:50%;border:4px solid var(--surface);background:var(--fg);color:var(--surface);font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:clamp(.9rem,3.6vw,1.1rem);cursor:pointer;z-index:3}
+.hub:disabled{opacity:.6;cursor:wait}
+.result{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:clamp(1.3rem,6vw,2rem);text-align:center;margin:18px 0 4px;min-height:1.2em;color:var(--accent)}
+.recent{text-align:center;color:var(--muted);font-size:.8rem;min-height:1.2em}
+/* 월드컵 */
+.sizes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+button{font-family:inherit}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:8px 16px;font-size:.9rem;font-weight:500;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.round{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.round b{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-weight:400;font-size:1.1rem}
+.round span{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.match{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:10px}
+@media (max-width:460px){.match{grid-template-columns:1fr;}}
+.pick{min-width:0;border:2px solid var(--line);background:var(--bg);color:var(--fg);border-radius:16px;padding:28px 12px;font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:clamp(1.1rem,4.5vw,1.5rem);line-height:1.3;cursor:pointer;transition:transform .12s,border-color .12s}
+.pick:hover{border-color:var(--accent);transform:translateY(-2px)}
+.vs{display:grid;place-items:center;color:var(--muted);font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:1.1rem}
+.champ{text-align:center;padding:10px 0}
+.champ small{color:var(--muted);letter-spacing:.14em;font-size:.75rem}
+.champ div{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:clamp(1.8rem,9vw,3rem);color:var(--accent);margin:6px 0 16px;text-wrap:balance}
+/* 목록 */
+details{border:1px dashed var(--line);border-radius:16px;padding:14px 16px}
+summary{cursor:pointer;font-weight:700;font-size:.95rem}
+textarea{width:100%;min-height:200px;margin-top:12px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:.9rem;line-height:1.8;resize:vertical}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.solid{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:9px 20px;font-weight:700;font-size:.9rem;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){canvas{transition-duration:.4s}.pick{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>오늘 <em>뭐 먹지</em></h1>
+    <p class="sub">먹고 싶은 거 15개. 돌림판이 찍어주거나, 월드컵으로 끝까지 골라내거나.</p>
+  </header>
+
+  <section class="card">
+    <h2>돌림판</h2>
+    <p class="hint">가운데 버튼을 누르면 돌아갑니다.</p>
+    <div class="stage">
+      <div class="needle"></div>
+      <canvas id="wheel" width="760" height="760"></canvas>
+      <button class="hub" id="spin">돌려</button>
+    </div>
+    <div class="result" id="result"></div>
+    <div class="recent" id="recent"></div>
+  </section>
+
+  <section class="card">
+    <h2>이상형 월드컵</h2>
+    <p class="hint">둘 중 더 당기는 쪽을 누르세요. 인원이 홀수면 부전승으로 올라갑니다.</p>
+    <div class="sizes" id="sizes"></div>
+    <div id="cup"></div>
+  </section>
+
+  <details>
+    <summary>메뉴 목록 바꾸기</summary>
+    <textarea id="list" spellcheck="false" aria-label="메뉴 목록, 한 줄에 하나"></textarea>
+    <div class="row">
+      <button class="solid" id="save">저장하고 새로 시작</button>
+      <button class="chip" id="reset">기본 목록으로</button>
+    </div>
+  </details>
+</div>
+
+<script>
+const DEFAULT = ["마왕족발","신전","엽닭","뿌링소떡","뿌링뿌링소스","토마토마라탕","계란볶음밥","국물닭발","닭똥집튀김","김밥","뼈해장국","방어","소고기","콰삭킹","굽네오리지날"];
+const KEY = "menu-list";
+let items = DEFAULT.slice();
+try { const s = localStorage.getItem(KEY); if (s) items = JSON.parse(s); } catch (e) {}
+
+const $ = id => document.getElementById(id);
+const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(p => p[1]);
+
+/* ---------- 돌림판 ---------- */
+const PIE = ["#d9372a","#e8701f","#f0a500","#9c3d2e","#c25d2b"];
+const cv = $("wheel"), cx = cv.getContext("2d");
+let angle = 0, spinning = false, recent = [];
+
+function drawWheel() {
+  const n = items.length, R = cv.width / 2, seg = (Math.PI * 2) / n;
+  cx.clearRect(0, 0, cv.width, cv.width);
+  for (let i = 0; i < n; i++) {
+    const a0 = -Math.PI / 2 + i * seg;
+    cx.beginPath();
+    cx.moveTo(R, R);
+    cx.arc(R, R, R - 4, a0, a0 + seg);
+    cx.fillStyle = PIE[i % PIE.length];
+    cx.fill();
+    cx.strokeStyle = "rgba(255,255,255,.35)";
+    cx.lineWidth = 2;
+    cx.stroke();
+    cx.save();
+    cx.translate(R, R);
+    cx.rotate(a0 + seg / 2);
+    cx.fillStyle = "#fff";
+    cx.textAlign = "right";
+    cx.textBaseline = "middle";
+    const label = items[i];
+    cx.font = `700 ${label.length > 7 ? 30 : 38}px "Noto Sans KR", sans-serif`;
+    cx.fillText(label, R - 28, 0);
+    cx.restore();
+  }
+}
+
+function spin() {
+  if (spinning || !items.length) return;
+  spinning = true;
+  $("spin").disabled = true;
+  const n = items.length, segDeg = 360 / n;
+  const win = Math.floor(Math.random() * n);
+  const jitter = (Math.random() - 0.5) * segDeg * 0.7;
+  angle = Math.ceil(angle / 360) * 360 + 360 * 5 - (win * segDeg + segDeg / 2) + jitter;
+  cv.style.transform = `rotate(${angle}deg)`;
+  $("result").textContent = "";
+  setTimeout(() => {
+    spinning = false;
+    $("spin").disabled = false;
+    $("result").textContent = items[win] + " !";
+    recent = [items[win], ...recent].slice(0, 5);
+    $("recent").textContent = "최근 " + recent.join(" · ");
+  }, 4300);
+}
+
+/* ---------- 월드컵 ---------- */
+let queue = [], next = [], roundSize = 0, played = 0;
+
+function renderSizes() {
+  const opts = [4, 8, 16, 32].filter(s => s <= items.length);
+  if (!opts.includes(items.length)) opts.push(items.length);
+  $("sizes").innerHTML = opts.map(s =>
+    `<button class="chip" data-n="${s}">${s === items.length ? `전체 ${s}개` : s + "강"}</button>`).join("");
+}
+
+function begin(list) {
+  queue = list.slice();
+  next = [];
+  roundSize = queue.length;
+  played = 0;
+  step();
+}
+
+function step() {
+  if (queue.length === 1 && !next.length) return champion(queue[0]);
+  if (!queue.length) return begin(next);
+  if (queue.length === 1) { next.push(queue.shift()); return step(); }  // 부전승
+  const [a, b] = [queue.shift(), queue.shift()];
+  played++;
+  const bracket = Math.pow(2, Math.ceil(Math.log2(roundSize)));
+  $("cup").innerHTML = `
+    <div class="round"><b>${bracket <= 2 ? "결승" : bracket + "강"}</b>
+      <span>${played} / ${Math.floor(roundSize / 2)}</span></div>
+    <div class="match">
+      <button class="pick" data-w="0">${a}</button>
+      <div class="vs">VS</div>
+      <button class="pick" data-w="1">${b}</button>
+    </div>`;
+  $("cup").querySelectorAll(".pick").forEach(btn =>
+    btn.onclick = () => { next.push(btn.dataset.w === "0" ? a : b); step(); });
+}
+
+function champion(name) {
+  $("cup").innerHTML = `<div class="champ"><small>우승</small><div>${name}</div>
+    <button class="solid" id="again">다시 하기</button></div>`;
+  $("again").onclick = renderSizes;
+}
+
+/* ---------- 목록 ---------- */
+function refresh() {
+  drawWheel();
+  renderSizes();
+  $("cup").innerHTML = "";
+  $("list").value = items.join("\n");
+}
+
+$("spin").onclick = spin;
+cv.onclick = spin;
+$("sizes").onclick = e => { const n = e.target.dataset?.n; if (n) begin(shuffle(items).slice(0, +n)); };
+$("save").onclick = () => {
+  const v = $("list").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (v.length < 2) return;
+  items = v;
+  try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {}
+  refresh();
+};
+$("reset").onclick = () => {
+  items = DEFAULT.slice();
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  refresh();
+};
+refresh();
+</script>
